@@ -1,0 +1,859 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glitch Rush — BytePet Arcade</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#070b18;
+  --aqua:#65f2e8;
+  --pink:#ff619d;
+  --gold:#ffdb74;
+}
+* { box-sizing:border-box }
+body {
+  margin:0;
+  min-height:100vh;
+  background:radial-gradient(ellipse at 50% 0%,#1b284c,#070b18 65%);
+  color:#eff8ff;
+  font-family:system-ui,Arial,sans-serif;
+  display:grid;
+  place-items:center;
+  padding:18px;
+}
+main { width:min(940px,100%) }
+header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+h1 {
+  font-size:clamp(26px,5vw,43px);
+  letter-spacing:2px;
+  margin:0;
+  font-weight:900;
+}
+h1 span { color:var(--aqua) }
+.eyebrow {
+  font-size:11px;
+  letter-spacing:3px;
+  color:#96a8cc;
+  font-weight:800;
+}
+.tag {
+  border:1px solid #38517a;
+  border-radius:50px;
+  padding:8px 13px;
+  font-size:12px;
+  color:#bfd0ee;
+  background:#101831;
+}
+.stats {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  margin-bottom:10px;
+}
+.stat {
+  background:#101931;
+  border:1px solid #273754;
+  border-radius:12px;
+  padding:10px 12px;
+}
+.stat small {
+  display:block;
+  font-size:10px;
+  letter-spacing:1.8px;
+  color:#93a7ce;
+}
+.stat strong {
+  font-variant-numeric:tabular-nums;
+  font-size:clamp(15px,3.5vw,22px);
+}
+.arena {
+  position:relative;
+  border:2px solid #435a82;
+  border-radius:17px;
+  overflow:hidden;
+  box-shadow:0 18px 70px #0008;
+  background:#080d20;
+}
+canvas {
+  display:block;
+  width:100%;
+  height:auto;
+  aspect-ratio:800/520;
+  touch-action:none;
+  cursor:crosshair;
+}
+.overlay {
+  position:absolute;
+  inset:0;
+  background:#040915d9;
+  backdrop-filter:blur(6px);
+  display:grid;
+  place-items:center;
+  padding:20px;
+  text-align:center;
+}
+.overlay.hidden { display:none }
+.modal { max-width:530px }
+.modal .icon { font-size:46px }
+h2 {
+  font-size:clamp(29px,6vw,54px);
+  letter-spacing:2px;
+  margin:8px 0;
+  color:var(--aqua);
+}
+.modal p {
+  line-height:1.65;
+  color:#c9d9f6;
+  margin:0 0 20px;
+}
+button {
+  font:inherit;
+  cursor:pointer;
+  border:0;
+  border-radius:11px;
+  background:var(--aqua);
+  color:#071321;
+  font-weight:900;
+  padding:13px 25px;
+  box-shadow:0 6px 0 #208b8a;
+}
+button:active { transform:translateY(4px) }
+button:focus-visible {
+  outline:3px solid white;
+  outline-offset:3px;
+}
+.bottom {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:13px;
+  color:#a8badd;
+  font-size:13px;
+}
+kbd {
+  border:1px solid #516384;
+  background:#18233b;
+  padding:4px 7px;
+  border-radius:6px;
+  color:#eaf3ff;
+  font-size:11px;
+}
+.actions { display:flex;gap:10px }
+#dashBtn {
+  background:#ffda77;
+  box-shadow:0 5px 0 #a37c2b;
+  padding:10px 17px;
+}
+#dashBtn:disabled {
+  opacity:.45;
+  cursor:not-allowed;
+  box-shadow:none;
+}
+#muteBtn {
+  background:#202b46;
+  color:#d5e6ff;
+  box-shadow:none;
+  border:1px solid #41577a;
+  padding:10px 13px;
+}
+.tiny {
+  color:#7990b6;
+  font-size:12px;
+  text-align:center;
+  margin-top:16px;
+}
+@media(max-width:550px) {
+  body { padding:10px }
+  .stats { gap:5px }
+  .stat { padding:8px }
+  .stat small { font-size:9px;letter-spacing:0 }
+  .bottom { font-size:11px }
+  .modal p { font-size:12px;line-height:1.5 }
+  h2 { font-size:28px }
+  .modal .icon { font-size:30px }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div>
+    <div class="eyebrow">BYTEPET ARCADE PRESENTS</div>
+    <h1>GLITCH <span>RUSH</span></h1>
+  </div>
+  <div class="tag">🐱 1 PET · 12 BYTES · 45 SECONDS</div>
+</header>
+
+<section class="stats">
+  <div class="stat">
+    <small>BYTES</small><strong id="bytes">0 / 12</strong>
+  </div>
+  <div class="stat">
+    <small>HEALTH</small><strong id="health">♥ ♥ ♥</strong>
+  </div>
+  <div class="stat">
+    <small>TIME</small><strong id="timer">45s</strong>
+  </div>
+  <div class="stat">
+    <small>SCORE</small><strong id="score">0</strong>
+  </div>
+</section>
+
+<div class="arena">
+  <canvas id="game" width="800" height="520"></canvas>
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <div class="icon" id="overlayIcon">🐱⚡</div>
+      <h2 id="overlayTitle">GLITCH RUSH</h2>
+      <p id="overlayText">
+        Collect <b>12 golden bytes</b> before the
+        45-second clock expires.
+        Dodge the red glitches! You have 3 hearts.
+        Dash to escape danger.
+        <br><br>
+        <b>Move:</b> WASD / arrow keys, or hold and drag
+        on the game field.
+        <br>
+        <b>Dash:</b> Space / Shift or the DASH button.
+      </p>
+      <button id="startBtn">START RUN ▶</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom">
+  <div>
+    MOVE <kbd>WASD</kbd> <kbd>↑↓←→</kbd>
+    or drag · DASH <kbd>SPACE</kbd>
+  </div>
+  <div class="actions">
+    <button id="muteBtn">🔊 Sound</button>
+    <button id="dashBtn">⚡ DASH</button>
+  </div>
+</div>
+<div class="tiny">
+  Built with HTML, CSS & JavaScript ·
+  Best score: <strong id="best">0</strong> (saved locally)
+</div>
+</main>
+
+<script>
+'use strict';
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+const $ = id => document.getElementById(id);
+const keys = new Set();
+const rand = (a,b) => a + Math.random()*(b-a);
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+
+let state='ready';
+let score=0, collected=0, hp=3, clock=45;
+let best=0;
+
+try {
+  best=Number(localStorage.getItem('glitch-rush-best'))||0;
+} catch (_) {}
+
+let player, byte;
+let enemies=[], particles=[];
+let spawnIn=0, shake=0;
+let pointer=null, dashRequest=false;
+let worldTime=0, lastTime=0;
+let muted=false, audio=null;
+
+const stars=Array.from({length:65},()=>({
+  x:rand(0,W),
+  y:rand(0,H),
+  r:rand(.5,1.9),
+  a:rand(.18,.62)
+}));
+
+function beep(freq=500,duration=.09,type='sine',volume=.045) {
+  if(muted) return;
+  try {
+    audio ||= new (window.AudioContext ||
+                     window.webkitAudioContext)();
+
+    if(audio.state==='suspended') audio.resume();
+
+    const o=audio.createOscillator();
+    const g=audio.createGain();
+    const t=audio.currentTime;
+
+    o.type=type;
+    o.frequency.setValueAtTime(freq,t);
+    o.frequency.exponentialRampToValueAtTime(
+      Math.max(50,freq*.68),t+duration
+    );
+
+    g.gain.setValueAtTime(volume,t);
+    g.gain.exponentialRampToValueAtTime(.001,t+duration);
+
+    o.connect(g).connect(audio.destination);
+    o.start(t);
+    o.stop(t+duration);
+  } catch (_) {}
+}
+
+function spawnByte() {
+  let x=400,y=260;
+  for(let i=0;i<60;i++) {
+    x=rand(40,W-40);
+    y=rand(45,H-40);
+
+    if(
+      Math.hypot(x-player.x,y-player.y)>125 &&
+      enemies.every(e=>Math.hypot(x-e.x,y-e.y)>65)
+    ) break;
+  }
+  byte={x,y,r:12,phase:rand(0,7)};
+}
+
+function spawnEnemy() {
+  const edge=Math.floor(rand(0,4));
+  const x=edge===0?-20:edge===1?W+20:rand(0,W);
+  const y=edge===2?-20:edge===3?H+20:rand(0,H);
+
+  enemies.push({
+    x,y,r:16,
+    speed:rand(62,88)+collected*4.4,
+    phase:rand(0,7)
+  });
+}
+
+function burst(x,y,color,n=14) {
+  for(let i=0;i<n;i++) {
+    const a=rand(0,Math.PI*2);
+    const speed=rand(65,230);
+    const life=rand(.25,.65);
+
+    particles.push({
+      x,y,
+      vx:Math.cos(a)*speed,
+      vy:Math.sin(a)*speed,
+      life,max:life,color,
+      r:rand(2,5)
+    });
+  }
+}
+
+function updateHUD() {
+  $('bytes').textContent=`${collected} / 12`;
+  $('health').textContent='♥ '.repeat(hp).trim()||'—';
+  $('timer').textContent=`${Math.ceil(clock)}s`;
+  $('score').textContent=score;
+  $('best').textContent=best;
+
+  $('dashBtn').disabled=
+    state!=='playing'||player?.cooldown>0;
+
+  $('dashBtn').textContent=player?.cooldown>0
+    ? `⚡ ${player.cooldown.toFixed(1)}s`
+    : '⚡ DASH';
+}
+
+function begin() {
+  state='playing';
+  score=0;
+  collected=0;
+  hp=3;
+  clock=45;
+  worldTime=0;
+  shake=0;
+
+  player={
+    x:W/2,y:H/2,r:16,
+    speed:250,
+    inv:0,dashing:0,cooldown:0,
+    faceX:1,faceY:0
+  };
+
+  enemies=[];
+  particles=[];
+  spawnIn=5;
+  dashRequest=false;
+  pointer=null;
+
+  spawnByte();
+  spawnEnemy();
+  spawnEnemy();
+
+  $('overlay').classList.add('hidden');
+  updateHUD();
+  beep(680,.12);
+}
+
+function finish(win) {
+  if(state!=='playing') return;
+
+  state=win?'won':'lost';
+
+  if(win) score+=Math.ceil(clock)*25;
+
+  if(score>best) {
+    best=score;
+    try {
+      localStorage.setItem('glitch-rush-best',String(best));
+    } catch (_) {}
+  }
+
+  $('overlayIcon').textContent=win?'🏆🐱':'💀⚡';
+  $('overlayTitle').textContent=
+    win?'YOU ESCAPED!':'GAME OVER';
+
+  $('overlayText').innerHTML=win
+    ? `You collected all <b>12 bytes</b> and escaped!
+       <br>Score: <b>${score}</b>
+       · Time remaining: <b>${Math.ceil(clock)}s</b>
+       <br>Can you beat your record?`
+    : `You collected <b>${collected} of 12</b> bytes.
+       <br>Score: <b>${score}</b> · Best: <b>${best}</b>
+       <br>Try again! Dash past glitches and keep moving.`;
+
+  $('startBtn').textContent='PLAY AGAIN ↻';
+  $('overlay').classList.remove('hidden');
+
+  beep(win?920:220,.25,win?'sine':'sawtooth');
+  updateHUD();
+}
+
+function moveInput() {
+  let dx=Number(
+    keys.has('KeyD')||keys.has('ArrowRight')
+  )-Number(
+    keys.has('KeyA')||keys.has('ArrowLeft')
+  );
+
+  let dy=Number(
+    keys.has('KeyS')||keys.has('ArrowDown')
+  )-Number(
+    keys.has('KeyW')||keys.has('ArrowUp')
+  );
+
+  if(dx===0&&dy===0&&pointer) {
+    const d=Math.hypot(
+      pointer.x-player.x,pointer.y-player.y
+    );
+    if(d>7) {
+      dx=(pointer.x-player.x)/d;
+      dy=(pointer.y-player.y)/d;
+    }
+  }
+
+  const len=Math.hypot(dx,dy);
+  return len>0?[dx/len,dy/len]:[0,0];
+}
+
+function update(dt) {
+  worldTime+=dt;
+
+  if(state==='playing') {
+    clock=Math.max(0,clock-dt);
+
+    if(clock<=0) {
+      finish(false);
+      return;
+    }
+
+    player.inv=Math.max(0,player.inv-dt);
+    player.cooldown=Math.max(0,player.cooldown-dt);
+    player.dashing=Math.max(0,player.dashing-dt);
+
+    let [dx,dy]=moveInput();
+
+    if(dx||dy) {
+      player.faceX=dx;
+      player.faceY=dy;
+    }
+
+    if(dashRequest&&player.cooldown<=0) {
+      player.cooldown=2;
+      player.dashing=.18;
+      burst(player.x,player.y,'#65f2e8',9);
+      beep(340,.16,'triangle');
+    }
+    dashRequest=false;
+
+    const speed=player.dashing>0?740:player.speed;
+    const mx=player.dashing>0?player.faceX:dx;
+    const my=player.dashing>0?player.faceY:dy;
+
+    player.x=clamp(player.x+mx*speed*dt,18,W-18);
+    player.y=clamp(player.y+my*speed*dt,18,H-18);
+
+    if(
+      Math.hypot(
+        player.x-byte.x,player.y-byte.y
+      )<player.r+byte.r+3
+    ) {
+      collected++;
+      score+=100+Math.ceil(clock/5);
+
+      burst(byte.x,byte.y,'#ffdc78',22);
+      beep(710+collected*22,.1,'triangle');
+
+      if(collected>=12) {
+        finish(true);
+        return;
+      }
+
+      spawnByte();
+    }
+
+    spawnIn-=dt;
+    if(spawnIn<=0) {
+      spawnEnemy();
+      spawnIn=Math.max(2.4,5.6-collected*.21);
+    }
+
+    for(const e of enemies) {
+      e.phase+=dt*2;
+
+      const vx=player.x-e.x;
+      const vy=player.y-e.y;
+      const d=Math.hypot(vx,vy)||1;
+
+      e.x+=(vx/d)*e.speed*dt;
+      e.y+=(vy/d)*e.speed*dt;
+
+      if(
+        d<player.r+e.r-4 &&
+        player.inv<=0 &&
+        player.dashing<=0
+      ) {
+        hp--;
+        player.inv=1.3;
+        shake=12;
+
+        burst(player.x,player.y,'#ff619d',27);
+        beep(120,.22,'sawtooth',.06);
+
+        if(hp<=0) {
+          finish(false);
+          return;
+        }
+      }
+    }
+
+    updateHUD();
+  }
+
+  shake=Math.max(0,shake-30*dt);
+
+  for(const p of particles) {
+    p.x+=p.vx*dt;
+    p.y+=p.vy*dt;
+    p.vx*=Math.exp(-2*dt);
+    p.vy*=Math.exp(-2*dt);
+    p.life-=dt;
+  }
+
+  particles=particles.filter(p=>p.life>0);
+}
+
+function circle(x,y,r,color) {
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fill();
+}
+
+function drawBackground() {
+  ctx.fillStyle='#080e21';
+  ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle='#23375a';
+  ctx.lineWidth=1;
+  ctx.globalAlpha=.38;
+
+  const off=(worldTime*9)%40;
+
+  for(let x=off;x<W;x+=40) {
+    ctx.beginPath();
+    ctx.moveTo(x,0);
+    ctx.lineTo(x,H);
+    ctx.stroke();
+  }
+
+  for(let y=off;y<H;y+=40) {
+    ctx.beginPath();
+    ctx.moveTo(0,y);
+    ctx.lineTo(W,y);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha=1;
+
+  for(const s of stars) {
+    circle(
+      s.x,s.y,s.r,
+      `rgba(170,218,255,${s.a})`
+    );
+  }
+
+  ctx.strokeStyle='#345476';
+  ctx.lineWidth=3;
+  ctx.strokeRect(12,12,W-24,H-24);
+}
+
+function drawByte() {
+  if(!byte) return;
+
+  const bob=Math.sin(worldTime*5+byte.phase)*5;
+
+  ctx.save();
+  ctx.translate(byte.x,byte.y+bob);
+  ctx.rotate(worldTime*1.8);
+
+  ctx.shadowBlur=28;
+  ctx.shadowColor='#ffd66c';
+  ctx.fillStyle='#ffdb74';
+
+  ctx.beginPath();
+  ctx.moveTo(0,-16);
+  ctx.lineTo(14,0);
+  ctx.lineTo(0,16);
+  ctx.lineTo(-14,0);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.shadowBlur=0;
+  ctx.strokeStyle='#fff7ca';
+  ctx.lineWidth=3;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawEnemy(e) {
+  ctx.save();
+  ctx.translate(e.x,e.y);
+  ctx.rotate(Math.sin(e.phase)*.17);
+
+  ctx.shadowBlur=17;
+  ctx.shadowColor='#ff366c';
+  ctx.fillStyle='#ff477a';
+
+  ctx.beginPath();
+  ctx.moveTo(-17,-12);
+  ctx.lineTo(4,-19);
+  ctx.lineTo(18,-6);
+  ctx.lineTo(16,16);
+  ctx.lineTo(-14,16);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#421124';
+  ctx.fillRect(-9,-4,6,7);
+  ctx.fillRect(4,-4,6,7);
+
+  ctx.fillStyle='#fff1f5';
+  ctx.fillRect(-8,-4,3,4);
+  ctx.fillRect(5,-4,3,4);
+
+  ctx.restore();
+}
+
+function drawPlayer() {
+  if(!player) return;
+
+  ctx.save();
+  ctx.translate(player.x,player.y);
+
+  if(
+    player.inv>0 &&
+    Math.floor(worldTime*13)%2===0
+  ) {
+    ctx.globalAlpha=.38;
+  }
+
+  ctx.shadowBlur=player.dashing>0?36:19;
+  ctx.shadowColor='#65f2e8';
+  ctx.fillStyle=player.dashing>0?'#c9fff8':'#65f2e8';
+
+  ctx.beginPath();
+  ctx.moveTo(-15,-8);
+  ctx.lineTo(-12,-23);
+  ctx.lineTo(-2,-15);
+  ctx.lineTo(2,-15);
+  ctx.lineTo(12,-23);
+  ctx.lineTo(15,-8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.roundRect(-17,-15,34,33,10);
+  ctx.fill();
+
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#102d3d';
+
+  ctx.fillRect(
+    -9+player.faceX*2,
+    -4+player.faceY*2,
+    5,8
+  );
+
+  ctx.fillRect(
+    4+player.faceX*2,
+    -4+player.faceY*2,
+    5,8
+  );
+
+  circle(0,9,2,'#f45d9f');
+  ctx.restore();
+}
+
+function draw() {
+  ctx.save();
+
+  if(shake>0) {
+    ctx.translate(
+      rand(-shake,shake),
+      rand(-shake,shake)
+    );
+  }
+
+  drawBackground();
+
+  if(state==='ready') {
+    circle(400,260,65,'#65f2e811');
+    ctx.fillStyle='#65f2e8';
+    ctx.font='bold 23px system-ui';
+    ctx.textAlign='center';
+    ctx.fillText('READY?',400,150);
+  }
+
+  drawByte();
+
+  for(const e of enemies) drawEnemy(e);
+  drawPlayer();
+
+  for(const p of particles) {
+    ctx.globalAlpha=p.life/p.max;
+    circle(p.x,p.y,p.r,p.color);
+  }
+
+  ctx.globalAlpha=1;
+
+  if(state==='playing') {
+    ctx.fillStyle='#162849';
+    ctx.fillRect(25,H-20,W-50,6);
+
+    ctx.fillStyle='#65f2e8';
+    ctx.fillRect(
+      25,H-20,
+      (W-50)*collected/12,
+      6
+    );
+  }
+
+  ctx.restore();
+}
+
+function frame(ms) {
+  const dt=Math.min((ms-lastTime)/1000||0,.034);
+  lastTime=ms;
+
+  update(dt);
+  draw();
+
+  requestAnimationFrame(frame);
+}
+
+$('startBtn').addEventListener('click',begin);
+
+$('dashBtn').addEventListener('click',()=>{
+  if(state==='playing') dashRequest=true;
+});
+
+$('muteBtn').addEventListener('click',()=>{
+  muted=!muted;
+  $('muteBtn').textContent=muted?'🔇 Muted':'🔊 Sound';
+  if(!muted) beep(500,.08);
+});
+
+addEventListener('keydown',e=>{
+  if([
+    'ArrowUp','ArrowDown',
+    'ArrowLeft','ArrowRight','Space'
+  ].includes(e.code)) {
+    e.preventDefault();
+  }
+
+  keys.add(e.code);
+
+  if(
+    (e.code==='Space' ||
+     e.code==='ShiftLeft' ||
+     e.code==='ShiftRight') &&
+     state==='playing'
+  ) {
+    dashRequest=true;
+  }
+
+  if(
+    (e.code==='Enter'||e.code==='KeyR') &&
+    state!=='playing'
+  ) begin();
+});
+
+addEventListener('keyup',e=>keys.delete(e.code));
+
+addEventListener('blur',()=>{
+  keys.clear();
+  pointer=null;
+});
+
+function setPointer(e) {
+  const r=canvas.getBoundingClientRect();
+
+  pointer={
+    x:(e.clientX-r.left)*W/r.width,
+    y:(e.clientY-r.top)*H/r.height
+  };
+}
+
+canvas.addEventListener('pointerdown',e=>{
+  if(state==='playing') {
+    setPointer(e);
+    canvas.setPointerCapture(e.pointerId);
+  }
+});
+
+canvas.addEventListener('pointermove',e=>{
+  if(state==='playing'&&pointer) setPointer(e);
+});
+
+canvas.addEventListener('pointerup',()=>pointer=null);
+canvas.addEventListener('pointercancel',()=>pointer=null);
+
+player={
+  x:W/2,y:H/2,r:16,
+  faceX:1,faceY:0,
+  cooldown:0,dashing:0,inv:0
+};
+
+byte={x:560,y:200,r:12,phase:0};
+
+updateHUD();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
